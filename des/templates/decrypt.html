@@ -1,0 +1,146 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Decrypt</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <style>
+        .zone-image {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 500px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 20px;
+        }
+
+        .zone-image input[type="text"] {
+            margin-top: 10px;
+            width: 80%;
+            padding: 8px;
+        }
+
+        .zone-image button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        .zone-image img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin-bottom: auto;
+        }
+
+        /* Estilo do botão de voltar */
+        .back-button {
+            color: white;
+            text-align: center;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+    </style>
+</head>
+<body>
+    <h1 id="title" style="margin-top: 10px;">Descriptografa seu arquivo</h1>
+    <form id="decrypt-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="zone">
+            <label for="file-input">Select encrypted file</label>
+            <input type="file" id="file-input" name="file" required onchange="updateLabel(this)">
+            <p>File size limit: 10 MB</p>
+        </div>
+
+        <div class="zone-image">
+            <label id="file-label" style="margin-top: -180px;">
+                <input type="text" name="key1" placeholder="Escreva sua chave de 8 dígitos:" required>
+                <input type="text" name="key2" placeholder="Escreva sua chave de 8 dígitos:" required>
+                <input type="text" name="key3" placeholder="Escreva sua chave de 8 dígitos:" required>
+                <button type="submit">Decrypt</button>
+            </label>
+        </div>
+
+    </form>
+
+    <!-- Botão de voltar -->
+    <button style="margin-top: 400px; margin-left: 300px;">
+        <a href="{% url 'index' %}" class="back-button">Voltar para a página inicial</a>
+    </button>
+
+    <script>
+        function updateLabel(input) {
+            const fileLabel = document.getElementById('file-label');
+            const fileName = input.files[0].name;
+
+            // Atualiza o texto do label com o nome do arquivo
+            input.previousElementSibling.innerText = `Selected file: ${fileName}`;
+
+            // Exibe o label que contém os campos de chave e o botão
+            fileLabel.style.display = 'block';
+        }
+
+        document.getElementById('decrypt-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const formData = new FormData(event.target);
+
+            fetch(event.target.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'  // Ensures CSRF token is sent
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Unknown error occurred');
+                    });
+                }
+                return response.blob(); // Handle image blob response
+            })
+            .then(blob => {
+                // Create a URL for the image blob
+                const url = URL.createObjectURL(blob);
+                
+                // Create a temporary link to download the image
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'decrypted_image.jpg'; // Set the desired file name
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                // Display error message
+                displayError(error.message);
+            });
+        });
+
+        function displayError(message) {
+            const errorBalloon = document.createElement('div');
+            errorBalloon.innerText = message;
+            errorBalloon.style.backgroundColor = '#f8d7da';
+            errorBalloon.style.color = '#721c24';
+            errorBalloon.style.padding = '10px';
+            errorBalloon.style.border = '1px solid #f5c6cb';
+            errorBalloon.style.borderRadius = '5px';
+            errorBalloon.style.marginTop = '10px';
+            errorBalloon.style.textAlign = 'center';
+            document.body.appendChild(errorBalloon);
+
+            setTimeout(() => errorBalloon.remove(), 5000);
+        }
+    </script>
+
+</body>
+</html>
